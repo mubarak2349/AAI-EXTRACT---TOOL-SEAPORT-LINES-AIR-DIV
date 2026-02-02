@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>accounts dashoard (Simplified) + Accounts Options + Air Cargo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1220;              /* page background */
+    --panel:#121a2b;           /* containers */
+    --panel-2:#16233a;         /* inner panels / cards */
+    --muted:#7a8aa0;           /* muted text */
+    --text:#e8eef6;            /* base text */
+    --accent:#00d2ff;          /* cyan accent */
+    --accent-2:#7c4dff;        /* purple accent */
+    --ok:#00c853;              /* green */
+    --warn:#ffb300;            /* amber */
+    --danger:#ff5252;          /* red */
+    --stroke:#22314d;          /* borders */
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --radius:14px;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    height:100%;
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(124,77,255,.12), transparent),
+                radial-gradient(1000px 800px at 110% 20%, rgba(0,210,255,.10), transparent),
+                var(--bg);
+    color:var(--text);
+    font-family: Inter, Segoe UI, Roboto, Arial, Helvetica, sans-serif;
+  }
+
+  /* Top App Bar */
+  .appbar{
+    position:sticky;top:0;z-index:10;
+    background: linear-gradient(180deg, rgba(18,26,43,.95), rgba(18,26,43,.85));
+    border-bottom:1px solid var(--stroke);
+    backdrop-filter: blur(10px);
+  }
+  .appbar-inner{
+    max-width:1200px;margin:0 auto;padding:16px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .brand{
+    font-weight:800;letter-spacing:.3px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-size:20px;
+  }
+  .spacer{flex:1}
+  .btn{
+    padding:10px 14px;border-radius:10px;border:1px solid var(--stroke);
+    color:var(--text);background:linear-gradient(180deg,#1a2743,#142039);
+    box-shadow: var(--shadow); cursor:pointer; font-weight:700;
+    transition: transform .06s ease, background .2s ease, border-color .2s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); border-color:#35507a; }
+  .btn.secondary{ background:#141c2e; }
+  input[type="file"]{ color:var(--muted); }
+
+  /* KPI Row */
+  .kpis{
+    max-width:1200px;margin:16px auto 0;display:grid;
+    grid-template-columns:repeat(4, minmax(180px,1fr));gap:12px;
+    padding:0 16px;
+  }
+  .kpi{
+    background:linear-gradient(180deg,var(--panel), #0f1730);
+    border:1px solid var(--stroke); border-radius:12px; padding:14px;
+  }
+  .kpi .label{font-size:12px; color:var(--muted); letter-spacing:.3px}
+  .kpi .value{font-size:22px; font-weight:800; margin-top:4px}
+  .kpi.ok .value{color:var(--ok)} .kpi.warn .value{color:var(--warn)} .kpi.danger .value{color:var(--danger)}
+
+  .container{
+    max-width:1200px;margin:16px auto;padding:16px;
+    background:linear-gradient(180deg, rgba(22,35,58,.9), rgba(18,26,43,.9));
+    border-radius:var(--radius); border:1px solid var(--stroke); box-shadow:var(--shadow);
+  }
+
+  .button-group{display:flex;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+
+  .tabs{display:flex;justify-content:center;margin-top:12px;gap:10px;flex-wrap:wrap}
+  .tab-btn{
+    background:#141c2e;border:1px solid var(--stroke);padding:8px 14px;border-radius:10px;cursor:pointer;user-select:none;
+    color:var(--muted); font-weight:700;
+  }
+  .tab-btn.active{background:linear-gradient(180deg,#1a2743,#142039); color:var(--text); border-color:#35507a}
+
+  .tab-content{display:none;margin-top:16px}
+  .tab-content.active{display:block}
+
+  table{
+    width:100%;border-collapse:separate;border-spacing:0;margin-top:12px;
+    background:var(--panel-2); border:1px solid var(--stroke); border-radius:12px; overflow:hidden
+  }
+  th,td{padding:12px 10px;text-align:center}
+  th{
+    background:linear-gradient(180deg,#1c2a47,#19243e);
+    color:#d8e4f4; font-weight:800; font-size:13px; letter-spacing:.2px;
+    border-bottom:1px solid var(--stroke);
+  }
+  tbody tr{border-bottom:1px solid var(--stroke)}
+  tbody tr:nth-child(even){background:#121c31}
+  tbody tr:hover{background:#1b2a46}
+
+  footer{text-align:center;margin-top:18px;font-size:13px;color:var(--muted)}
+
+  /* Accounts UI */
+  .subtabs{display:flex;gap:8px;flex-wrap:wrap}
+  .subtab-btn{
+    background:#121c31;border:1px solid var(--stroke);padding:6px 10px;border-radius:8px;cursor:pointer;color:#9fb1c9
+  }
+  .subtab-btn.active{background:#1a2743;color:#fff;border-color:#35507a}
+  .subtab-content{display:none;margin-top:12px}
+  .subtab-content.active{display:block}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px}
+  .card{background:var(--panel-2);border:1px solid var(--stroke);border-radius:12px;padding:12px}
+  h4{margin-bottom:6px}
+  label{display:block;font-size:12px;margin-bottom:4px;color:#a8b8d0}
+  input,select,textarea{
+    width:100%;padding:10px;border-radius:10px;border:1px solid #2a3b5e;background:#0e1526;color:var(--text)
+  }
+  input[type="date"], input[type="month"]{color-scheme:dark}
+  .right{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#0e1526;border:1px solid var(--stroke);font-size:12px;color:#c9d6ea}
+  .totals{Display:flex;gap:8px;flex-wrap:wrap}
+  .totals .pill{background:#121c31}
+  canvas{max-width:100%;background:#0e1526;border:1px solid var(--stroke);border-radius:8px}
+  .mini{font-size:12px;color:#9fb1c9}
+  .file{border:1px dashed #2a3b5e;padding:12px;border-radius:10px;text-align:center;background:#0e1526;color:#9fb1c9}
+  .hint{opacity:.9;font-size:12px;margin-top:8px;text-align:center;color:#9fb1c9}
+</style>
+</head>
+<body>
+
+<!-- Top App Bar -->
+<div class="appbar">
+  <div class="appbar-inner">
+    <div class="brand"> Finance Dashboard by Mubarak</div>
+    <div class="spacer"></div>
+    <input type="file" id="fileUpload" accept=".pdf" multiple />
+    <button class="btn" onclick="processFiles('fileUpload')">Upload</button>
+    <button class="btn secondary" onclick="exportToExcel()">Export Invoices</button>
+  </div>
+</div>
+
+<!-- KPI Row (visual only, does not change invoice formats) -->
+<div class="kpis">
+  <div class="kpi"><div class="label">This Month Income</div><div class="value" id="kpiInc">0.00</div></div>
+  <div class="kpi"><div class="label">This Month Expense</div><div class="value" id="kpiExp">0.00</div></div>
+  <div class="kpi ok"><div class="label">This Month Profit</div><div class="value" id="kpiProfit">0.00</div></div>
+  <div class="kpi"><div class="label">Open Receivables</div><div class="value" id="kpiAR">0.00</div></div>
+</div>
+
+<div class="container">
+  <div class="button-group">
+    <!-- kept for quick access besides topbar -->
+    <button class="btn" onclick="processFiles('fileUpload')">Upload</button>
+    <button class="btn secondary" onclick="exportAccountsToExcel()">Export All to Excel</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab-btn active" onclick="switchTab('tab1', event)">Cholamandal Invoices</div>
+    <div class="tab-btn" onclick="switchTab('tab2', event)">AAI Cargo  AND AICLAS Invocie</div>
+    <div class="tab-btn" onclick="switchTab('tab3', event)">Accounts Options</div>
+  </div>
+
+  <!-- TYPE 1 (UNCHANGED FORMAT) with local uploader -->
+  <div id="tab1" class="tab-content active">
+    <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+      <input type="file" id="fileUpload1" accept=".pdf" multiple />
+      <button class="btn" onclick="processFiles('fileUpload1')">Upload (Cholamandal)</button>
+      <button class="btn secondary" onclick="exportToExcel()">Export Invoices</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Invoice No</th>
+          <th>Invoice Date</th>
+          <th>AWB No</th>
+          <th>Taxable Amount</th>
+        </tr>
+      </thead>
+      <tbody id="tableType1"></tbody>
+    </table>
+  </div>
+
+  <!-- TYPE 2 (UNCHANGED FORMAT) with local uploader -->
+  <div id="tab2" class="tab-content">
+    <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+      <input type="file" id="fileUpload2" accept=".pdf" multiple />
+      <button class="btn" onclick="processFiles('fileUpload2')">Upload (AAI)</button>
+      <button class="btn secondary" onclick="exportToExcel()">Export Invoices</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>TC No</th>
+          <th>Invoice No</th>
+          <th>Invoice Date</th>
+          <th>AWB No</th>
+          <th>Total Taxable</th>
+          <th>Net Payable</th>
+        </tr>
+      </thead>
+      <tbody id="tableType2"></tbody>
+    </table>
+  </div>
+
+  <!-- === ACCOUNTS OPTIONS (10 FEATURES + Air Cargo subtab) === -->
+  <div id="tab3" class="tab-content">
+    <div class="right" style="margin-bottom:8px;">
+      <button class="btn" onclick="exportAccountsToExcel()">Export Accounts to Excel</button>
+     
+    </div>
+
+    <div class="subtabs" id="acctSubtabs">
+      <div class="subtab-btn active" data-target="acc1">1. Daily Expense Entry</div>
+      <div class="subtab-btn" data-target="acc2">2. Income Entry</div>
+      <div class="subtab-btn" data-target="acc3">3. Cashbook Ledger</div>
+      <div class="subtab-btn" data-target="acc4">4. Bank Reconciliation</div>
+      <div class="subtab-btn" data-target="acc5">5. Receivables</div>
+      <div class="subtab-btn" data-target="acc6">6. Payables</div>
+      <div class="subtab-btn" data-target="acc7">7. GST Summary</div>
+      <div class="subtab-btn" data-target="acc8">8. P&L Snapshot</div>
+      <div class="subtab-btn" data-target="acc9">9. Expense Categories</div>
+      <div class="subtab-btn" data-target="acc10">10. Year-End Closing</div>
+      <div class="subtab-btn" data-target="acc11">11. Air Cargo Data Management</div>
+    </div>
+
+    <!-- 1. Daily Expense Entry -->
+    <div id="acc1" class="subtab-content active">
+      <div class="row">
+        <div class="card">
+          <h4>New Expense</h4>
+          <div class="row">
+            <div><label>Date</label><input type="date" id="expDate"></div>
+            <div><label>Category</label>
+              <select id="expCategory">
+                <option>Travel</option><option>Salary</option><option>Stationery</option>
+                <option>Rent</option><option>Utilities</option><option>Professional Fees</option>
+                <option>Misc</option>
+              </select>
+            </div>
+            <div><label>Payment Mode</label><select id="expMode"><option>Cash</option><option>Bank</option></select></div>
+            <div><label>Amount</label><input type="number" step="0.01" id="expAmount" placeholder="0.00"></div>
+            <div><label>GST % (optional)</label><input type="number" step="0.01" id="expGst" placeholder="0 / 5 / 12 / 18"></div>
+            <div style="grid-column:1/-1"><label>Description</label><input id="expDesc" placeholder="Notes"></div>
+          </div>
+          <div class="right" style="margin-top:10px;">
+            <button class="btn" onclick="addExpense()">Add Expense</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Recent Expenses</h4>
+          <table>
+            <thead><tr><th>Date</th><th>Cat</th><th>Mode</th><th>Amt</th><th>GST</th><th>Desc</th><th>⚙</th></tr></thead>
+            <tbody id="expTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Income Entry -->
+    <div id="acc2" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>New Income</h4>
+          <div class="row">
+            <div><label>Date</label><input type="date" id="incDate"></div>
+            <div><label>Source</label><input id="incSource" placeholder="Customer / Service"></div>
+            <div><label>Payment Mode</label><select id="incMode"><option>Cash</option><option>Bank</option></select></div>
+            <div><label>Amount</label><input type="number" step="0.01" id="incAmount" placeholder="0.00"></div>
+            <div><label>GST % (optional)</label><input type="number" step="0.01" id="incGst" placeholder="0 / 5 / 12 / 18"></div>
+            <div style="grid-column:1/-1"><label>Description</label><input id="incDesc" placeholder="Notes"></div>
+          </div>
+          <div class="right" style="margin-top:10px;">
+            <button class="btn" onclick="addIncome()">Add Income</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Recent Incomes</h4>
+          <table>
+            <thead><tr><th>Date</th><th>Source</th><th>Mode</th><th>Amt</th><th>GST</th><th>Desc</th><th>⚙</th></tr></thead>
+            <tbody id="incTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Cashbook Ledger -->
+    <div id="acc3" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Filters</h4>
+          <div class="row">
+            <div><label>From</label><input type="date" id="cbFrom"></div>
+            <div><label>To</label><input type="date" id="cbTo"></div>
+            <div><label>Mode</label>
+              <select id="cbMode"><option value="ALL">ALL</option><option>Cash</option><option>Bank</option></select>
+            </div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="renderCashbook()">Apply</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="totals" style="margin-bottom:6px;">
+            <span class="pill" id="cbIn">In: 0.00</span>
+            <span class="pill" id="cbOut">Out: 0.00</span>
+            <span class="pill" id="cbBal">Balance: 0.00</span>
+          </div>
+          <table>
+            <thead><tr><th>Date</th><th>Particulars</th><th>Mode</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody id="cbTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Bank Reconciliation -->
+    <div id="acc4" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Upload Bank CSV</h4>
+          <div class="file">
+            <input type="file" id="bankCsv" accept=".csv">
+            <div class="mini" style="margin-top:6px;">Expected columns (any order): Date, Description, Amount (positive=in, negative=out)</div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="processBankCsv()">Import & Match</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Unmatched Bank Entries</h4>
+          <table>
+            <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+            <tbody id="bankUnmatched"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h4>Matched Summary</h4>
+          <div class="totals">
+            <span class="pill" id="bankInMatched">In matched: 0.00</span>
+            <span class="pill" id="bankOutMatched">Out matched: 0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Outstanding Receivables -->
+    <div id="acc5" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Add Receivable</h4>
+          <div class="row">
+            <div><label>Customer</label><input id="recCustomer"></div>
+            <div><label>Invoice No</label><input id="recInv"></div>
+            <div><label>Invoice Date</label><input type="date" id="recDate"></div>
+            <div><label>Due Date</label><input type="date" id="recDue"></div>
+            <div><label>Amount</label><input type="number" step="0.01" id="recAmt"></div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="addReceivable()">Add</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Receivables</h4>
+          <table>
+            <thead><tr><th>Customer</th><th>Invoice</th><th>Inv Date</th><th>Due</th><th>Amount</th><th>Status</th><th>⚙</th></tr></thead>
+            <tbody id="recTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Outstanding Payables -->
+    <div id="acc6" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Add Payable</h4>
+          <div class="row">
+            <div><label>Vendor</label><input id="payVendor"></div>
+            <div><label>Bill No</label><input id="payBill"></div>
+            <div><label>Bill Date</label><input type="date" id="payDate"></div>
+            <div><label>Due Date</label><input type="date" id="payDue"></div>
+            <div><label>Amount</label><input type="number" step="0.01" id="payAmt"></div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="addPayable()">Add</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Payables</h4>
+          <table>
+            <thead><tr><th>Vendor</th><th>Bill</th><th>Bill Date</th><th>Due</th><th>Amount</th><th>Status</th><th>⚙</th></tr></thead>
+            <tbody id="payTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. GST Summary -->
+    <div id="acc7" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Period</h4>
+          <div class="row">
+            <div><label>From</label><input type="date" id="gstFrom"></div>
+            <div><label>To</label><input type="date" id="gstTo"></div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="renderGst()">Calculate</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>GST Totals</h4>
+          <div class="totals">
+            <span class="pill" id="gstOut">Output GST: 0.00</span>
+            <span class="pill" id="gstIn">Input GST: 0.00</span>
+            <span class="pill" id="gstNet">Net GST Payable: 0.00</span>
+          </div>
+          <div class="mini" style="margin-top:6px;">Calculated from Income (Output) & Expenses (Input) GST% fields.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Profit & Loss Snapshot -->
+    <div id="acc8" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Select Month</h4>
+          <div class="row">
+            <div style="max-width:280px;">
+              <label>Month</label>
+              <input type="month" id="plMonth">
+            </div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="renderPL()">Generate</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>P&L</h4>
+          <div class="totals">
+            <span class="pill" id="plIncome">Income: 0.00</span>
+            <span class="pill" id="plExpense">Expense: 0.00</span>
+            <span class="pill" id="plProfit">Profit: 0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Expense Categories Report -->
+    <div id="acc9" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Period</h4>
+          <div class="row">
+            <div><label>From</label><input type="date" id="catFrom"></div>
+            <div><label>To</label><input type="date" id="catTo"></div>
+          </div>
+          <div class="right" style="margin-top:8px;">
+            <button class="btn" onclick="renderCategoryReport()">Run Report</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Breakdown</h4>
+          <canvas id="catChart" height="160"></canvas>
+          <table>
+            <thead><tr><th>Category</th><th>Total</th></tr></thead>
+            <tbody id="catTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Year-End Closing Helper -->
+    <div id="acc10" class="subtab-content">
+      <div class="row">
+        <div class="card">
+          <h4>Balance Snapshot</h4>
+          <div class="totals" style="margin-bottom:8px;">
+            <span class="pill" id="yeCash">Cash Balance: 0.00</span>
+            <span class="pill" id="yeBank">Bank Balance: 0.00</span>
+            <span class="pill" id="yeAR">Receivables: 0.00</span>
+            <span class="pill" id="yeAP">Payables: 0.00</span>
+          </div>
+          <div class="right">
+            <button class="btn" onclick="renderYearEnd()">Refresh</button>
+            <button class="btn secondary" onclick="exportYearEnd()">Export Snapshot</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Air Cargo Data Management (NEW) -->
+    <div id="acc11" class="subtab-content">
+      <h4>Air Cargo Data Entry</h4>
+      <div class="row">
+        <div class="card" style="grid-column:1/-1">
+          <div class="row">
+            <div><label>AIRPOL INV NO</label><input id="f_airpol" placeholder="AIRPOLINVNO"></div>
+            <div><label>VOYAGE NO</label><input id="f_voyage" placeholder="VOYAGE NO"></div>
+            <div><label>DATE</label><input type="date" id="f_date"></div>
+            <div><label>SHIPPER</label><input id="f_shipper" placeholder="SHIPPER"></div>
+            <div><label>CONSIGNEE</label><input id="f_consignee" placeholder="CONSIGNEE"></div>
+            <div><label>SUBAGENT</label><input id="f_subagent" placeholder="SUBAGENT"></div>
+            <div><label>AWB NUMBER</label><input id="f_awb" placeholder="AWB NUMBER"></div>
+            <div><label>SHIPPER INV No</label><input id="f_shipinv" placeholder="SHIPPERINVNO"></div>
+            <div><label>SBNO</label><input id="f_sbno"></div>
+            <div><label>COMM</label><input id="f_comm"></div>
+            <div><label>G.WT</label><input id="f_gwt" type="number" step="0.01"></div>
+            <div><label>C.WT</label><input id="f_cwt" type="number" step="0.01"></div>
+            <div><label>NO.OF PCS</label><input id="f_pcs"></div>
+            <div><label>FLT</label><input id="f_flt"></div>
+            <div><label>FLT NO</label><input id="f_fltno"></div>
+            <div><label>POL</label><input id="f_pol"></div>
+            <div><label>POD</label><input id="f_pod"></div>
+            <div><label>AIRLINES</label><input id="f_airlines"></div>
+            <div><label>BUYING</label><input id="f_buying" type="number" step="0.01"></div>
+            <div><label>SELLING</label><input id="f_selling" type="number" step="0.01"></div>
+            <div><label>FREIGHT amt</label><input id="f_freight" type="number" step="0.01"></div>
+            <div><label>AWB chrgs</label><input id="f_awbchr" type="number" step="0.01"></div>
+            <div><label>SERVICE CHARGES</label><input id="f_srv" type="number" step="0.01"></div>
+            <div><label>AAI CHARGES</label><input id="f_aai" type="number" step="0.01"></div>
+            <div><label>DOCUMENTATION chrgs</label><input id="f_doc" type="number" step="0.01"></div>
+            <div><label>EXAMINATION chrgs</label><input id="f_exam" type="number" step="0.01"></div>
+            <div><label>HANDLING chrgs</label><input id="f_hand" type="number" step="0.01"></div>
+            <div><label>TRANSPORT chrgs</label><input id="f_trans" type="number" step="0.01"></div>
+            <div><label>MOT chrgs</label><input id="f_mot" type="number" step="0.01"></div>
+            <div><label>V.PASS chrgs</label><input id="f_vpass" type="number" step="0.01"></div>
+            <div><label>PQ chrgs</label><input id="f_pq" type="number" step="0.01"></div>
+            <div style="grid-column:1/-1"><label>OTHER CHARGES (comment)</label><input id="f_other" placeholder="details"></div>
+            <div><label>AIRLINES amt</label><input id="f_airamt" type="number" step="0.01"></div>
+            <div><label>DUECARRIER chrgs</label><input id="f_due" type="number" step="0.01"></div>
+            <div><label>CHA chrgs</label><input id="f_cha" type="number" step="0.01"></div>
+            <div><label>AAI chgrs</label><input id="f_aai2" type="number" step="0.01"></div>
+            <div><label>SUNDRIES</label><input id="f_sund" type="number" step="0.01"></div>
+            <div style="grid-column:1/-1"><label>CHA OR FORWARDING AGENT</label><input id="f_agent" placeholder="Agent name"></div>
+          </div>
+
+          <div class="right" style="margin-top:10px;">
+            <button class="btn" onclick="addCargo()">Add Cargo</button>
+            <button class="btn secondary" onclick="exportCargo()">Export Cargo</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <table>
+          <thead>
+            <tr>
+              <th>AIRPOLINVNO</th><th>VOYAGE</th><th>DATE</th><th>SHIPPER</th><th>SELLING</th><th>BUYING</th>
+              <th>GST@18%</th><th>TOTAL SALES</th><th>MARGIN</th><th>NET PROFIT</th><th>⚙</th>
+            </tr>
+          </thead>
+          <tbody id="cargoTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="hint" style="margin-top:10px;">💡 All account data is stored locally in your browser (localStorage). No server & No Tally.</p>
+  </div>
+<footer> <span class="pill">Non-Tally • Internal Use</span>
+  <footer>Created by <strong>Mubarak</strong></footer>
+</div>
+
+<script>
+/* ========================= ORIGINAL EXTRACT CODE (UNCHANGED) with small adapt for multiple file inputs ========================= */
+let dataType1 = [], dataType2 = [];
+
+/* Tab switching */
+function switchTab(tabId, ev){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  if (ev && ev.target) ev.target.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+/* Subtabs for Accounts */
+document.getElementById('acctSubtabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.subtab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.subtab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const tgt = btn.getAttribute('data-target');
+  document.querySelectorAll('.subtab-content').forEach(s=>s.classList.remove('active'));
+  document.getElementById(tgt).classList.add('active');
+});
+
+/* PDF text grouping helpers (unchanged) */
+function groupTextByLines(items){
+  const lines = [];
+  const TOL = 2.0;
+  for (const it of items){
+    const tr = it.transform || it.textMatrix || [1,0,0,1,0,0];
+    const x = tr[4] || 0;
+    const y = tr[5] || 0;
+    let line = lines.find(l => Math.abs(l.y - y) <= TOL);
+    if (!line){ line = { y, seg: [] }; lines.push(line); }
+    line.seg.push({ x, str: it.str });
+  }
+  lines.sort((a,b)=> b.y - a.y);
+  for (const l of lines) l.seg.sort((a,b)=> a.x - b.x);
+  return lines.map(l => l.seg.map(s=>s.str).join(' ').replace(/\s+/g,' ').trim());
+}
+
+async function processPDF(file){
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const typed = new Uint8Array(e.target.result);
+      const pdf = await pdfjsLib.getDocument({ data: typed }).promise;
+      let allText = '';
+      let allLines = [];
+      for (let p=1; p<=pdf.numPages; p++){
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const lines = groupTextByLines(content.items);
+        allLines = allLines.concat(lines);
+        allText += lines.join('\n') + '\n';
+      }
+      detectAndExtract(allText, allLines);
+      resolve();
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/* processFiles now accepts optional inputId - default is topbar 'fileUpload' */
+function processFiles(inputId='fileUpload'){
+  const inp = document.getElementById(inputId);
+  if (!inp){ alert('No file input found: '+inputId); return; }
+  const files = inp.files;
+  if (!files.length){ alert('Please select at least one PDF file.'); return; }
+  dataType1 = []; dataType2 = [];
+  const work = Array.from(files).map(processPDF);
+  Promise.all(work).then(()=> {
+    populateTable('tableType1', dataType1);
+    populateTable('tableType2', dataType2);
+    // scroll to first tab maybe
+    document.querySelector('.tab-btn').scrollIntoView({behavior:'smooth'});
+  });
+}
+
+function normalizeAmountLine(line){
+  return line
+    .replace(/[₹Rs:]/gi,' ')
+    .replace(/\s*,\s*/g, ',')
+    .replace(/\s*\.\s*/g, '.')
+    .replace(/(\d)\s+(?=[\d,.])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function amountsOnLine(line){
+  const clean = normalizeAmountLine(line);
+  const out = [];
+  const re = /(\d[\d,]*\.\d{2}|\d[\d,]*)/g;
+  let m;
+  while ((m = re.exec(clean)) !== null){
+    const val = m[1];
+    const after = clean.slice(re.lastIndex, re.lastIndex + 3);
+    if (/%/.test(after)) continue;
+    const before = clean[m.index - 1] || ' ';
+    const next = clean[re.lastIndex] || ' ';
+    if (before === '-' || next === '-') continue;
+    out.push(val);
+  }
+  return out;
+}
+
+function rightmostAmount(line){
+  const arr = amountsOnLine(line);
+  if (arr.length === 0) return '';
+  return arr[arr.length - 1];
+}
+
+function toFixed2(s){
+  if (!s) return '';
+  const num = parseFloat(String(s).replace(/,/g,''));
+  if (isNaN(num)) return '';
+  return num.toFixed(2);
+}
+
+function normalizeDate(text){
+  const re = /(\d{1,2})[.\-\/\s](\d{1,2}|[A-Za-z]{3,9})[.\-\/\s](\d{4})/;
+  const m = text.match(re);
+  if (!m) return '';
+  let dd = m[1].padStart(2,'0');
+  let mm = m[2];
+  const yy = m[3];
+  const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  if (isNaN(mm)){
+    mm = months[mm.toLowerCase().slice(0,3)] || '';
+  } else {
+    mm = parseInt(mm,10);
+  }
+  if (!mm) return '';
+  return `${dd}-${String(mm).padStart(2,'0')}-${yy}`;
+}
+
+function detectAndExtract(text, lines){
+  if (/CCC\/\d{2}-\d{2}\//i.test(text)){
+    extractType1(text, lines);
+  } else if (/TC\s*No/i.test(text)){
+    extractType2(text, lines);
+  } else {
+    extractType1(text, lines);
+  }
+}
+
+function extractType1(text, lines){
+  const invoiceNo = (text.match(/CCC\/\d{2}-\d{2}\/\d+/i) || [''])[0];
+  const awbNo = (text.match(/\b\d{3}-\d{4}\s*\d{4}\b/) || [''])[0];
+  const invoiceDate = normalizeDate(text);
+
+  const labelRe = /(taxable\s*amount|taxable\s*value|taxable\s*amt|total\s*taxable)/i;
+  let taxable = '';
+  for (let i=0; i<lines.length; i++){
+    if (labelRe.test(lines[i])){
+      const amt = rightmostAmount(lines[i]);
+      if (amt){ taxable = toFixed2(amt); break; }
+      for (let k=1; k<=2 && i+k<lines.length; k++){
+        const alt = rightmostAmount(lines[i+k]);
+        if (alt){ taxable = toFixed2(alt); break; }
+      }
+      if (taxable) break;
+    }
+  }
+
+  dataType1.push({
+    'Invoice No': invoiceNo,
+    'Invoice Date': invoiceDate,
+    'AWB No': awbNo,
+    'Taxable Amount': taxable || ''
+  });
+}
+
+function extractType2(text, lines){
+  const getFrom = (re) => (text.match(re) || ['',''])[1] || '';
+  const fields = {
+    'TC No': getFrom(/TC\s*No\.?[:\s]*([A-Za-z0-9\-]+)/i),
+    'Invoice No': getFrom(/Invoice\s*No\.?[:\s]*([A-Za-z0-9\-]+)/i),
+    'Invoice Date': normalizeDate(text),
+    'AWB No': getFrom(/AWB\s*No[:\s]*([0-9\- ]+)/i),
+  };
+
+  let totalTaxable = '';
+  let netPayable = '';
+  for (const ln of lines){
+    if (/total\s*taxable/i.test(ln)) totalTaxable = toFixed2(rightmostAmount(ln)) || totalTaxable;
+    if (/net\s*payable/i.test(ln))   netPayable   = toFixed2(rightmostAmount(ln)) || netPayable;
+  }
+
+  dataType2.push({
+    ...fields,
+    'Total Taxable': totalTaxable || '',
+    'Net Payable': netPayable || ''
+  });
+}
+
+function populateTable(tbodyId, rows){
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = Object.values(r).map(v=>`<td>${v||''}</td>`).join('');
+    tbody.appendChild(tr);
+  });
+}
+
+function exportToExcel(){
+  const wb = XLSX.utils.book_new();
+  if (dataType1.length){
+    const ws1 = XLSX.utils.json_to_sheet(dataType1);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Type1');
+  }
+  if (dataType2.length){
+    const ws2 = XLSX.utils.json_to_sheet(dataType2);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Type2');
+  }
+  XLSX.writeFile(wb, 'AAI_Invoices_Combined.xlsx');
+}
+
+/* ========================= ACCOUNTS STORAGE & HELPERS ========================= */
+const LS_KEYS = {
+  expenses: 'acct_expenses_v1',
+  incomes: 'acct_incomes_v1',
+  receivables: 'acct_receivables_v1',
+  payables: 'acct_payables_v1',
+  bank: 'acct_bank_rows_v1',
+  cargo: 'cargo_v1'
+};
+
+const state = {
+  expenses: load(LS_KEYS.expenses, []),
+  incomes: load(LS_KEYS.incomes, []),
+  receivables: load(LS_KEYS.receivables, []),
+  payables: load(LS_KEYS.payables, []),
+  bankRows: load(LS_KEYS.bank, []),
+  cargo: load(LS_KEYS.cargo, [])
+};
+
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function load(key, def){ try{ return JSON.parse(localStorage.getItem(key)) || def; }catch(e){ return def; } }
+function fmt(n){ n = Number(n||0); return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function parseDateInput(v){ return v ? new Date(v+'T00:00:00') : null; }
+function inRange(d, from, to){ if (!d) return false; if (from && d < from) return false; if (to && d > to) return false; return true; }
+function monthKey(dateStr){ if(!dateStr) return ''; const d=new Date(dateStr+'T00:00:00'); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+
+/* ========================= ACCOUNTS: SUBTABS ========================= */
+
+/* ========================= 1. EXPENSES ========================= */
+function addExpense(){
+  const row = {
+    id: crypto.randomUUID(),
+    date: document.getElementById('expDate').value,
+    category: document.getElementById('expCategory').value,
+    mode: document.getElementById('expMode').value,
+    amount: Number(document.getElementById('expAmount').value||0),
+    gstPct: Number(document.getElementById('expGst').value||0),
+    desc: document.getElementById('expDesc').value.trim()
+  };
+  if(!row.date || row.amount<=0){ alert('Date & positive Amount required'); return; }
+  state.expenses.unshift(row);
+  save(LS_KEYS.expenses, state.expenses);
+  renderExpenses(); renderKpis(); renderYearEnd();
+  document.getElementById('expAmount').value='';
+  document.getElementById('expDesc').value='';
+}
+function delExpense(id){
+  state.expenses = state.expenses.filter(x=>x.id!==id);
+  save(LS_KEYS.expenses, state.expenses);
+  renderExpenses(); renderKpis(); renderYearEnd();
+}
+function renderExpenses(){
+  const tb = document.getElementById('expTable');
+  tb.innerHTML = '';
+  state.expenses.slice(0,100).forEach((r,idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date||''}</td><td>${r.category||''}</td><td>${r.mode||''}</td>
+                    <td>${fmt(r.amount)}</td><td>${r.gstPct||0}%</td><td>${r.desc||''}</td>
+                    <td><button class="btn secondary" onclick="delExpense('${r.id}')">Delete</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ========================= 2. INCOMES ========================= */
+function addIncome(){
+  const row = {
+    id: crypto.randomUUID(),
+    date: document.getElementById('incDate').value,
+    source: document.getElementById('incSource').value.trim(),
+    mode: document.getElementById('incMode').value,
+    amount: Number(document.getElementById('incAmount').value||0),
+    gstPct: Number(document.getElementById('incGst').value||0),
+    desc: document.getElementById('incDesc').value.trim()
+  };
+  if(!row.date || row.amount<=0){ alert('Date & positive Amount required'); return; }
+  state.incomes.unshift(row);
+  save(LS_KEYS.incomes, state.incomes);
+  renderIncomes(); renderKpis(); renderYearEnd();
+  document.getElementById('incAmount').value='';
+  document.getElementById('incSource').value='';
+}
+function delIncome(id){
+  state.incomes = state.incomes.filter(x=>x.id!==id);
+  save(LS_KEYS.incomes, state.incomes);
+  renderIncomes(); renderKpis(); renderYearEnd();
+}
+function renderIncomes(){
+  const tb = document.getElementById('incTable');
+  tb.innerHTML = '';
+  state.incomes.slice(0,100).forEach((r,idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date||''}</td><td>${r.source||''}</td><td>${r.mode||''}</td>
+                    <td>${fmt(r.amount)}</td><td>${r.gstPct||0}%</td><td>${r.desc||''}</td>
+                    <td><button class="btn secondary" onclick="delIncome('${r.id}')">Delete</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ========================= 3. CASHBOOK ========================= */
+function renderCashbook(){
+  const from = parseDateInput(document.getElementById('cbFrom').value);
+  const to = parseDateInput(document.getElementById('cbTo').value);
+  const mode = document.getElementById('cbMode').value;
+
+  const lines = [];
+  state.incomes.forEach(r=>{
+    const d = parseDateInput(r.date);
+    if(!inRange(d,from,to)) return;
+    if(mode!=='ALL' && r.mode!==mode) return;
+    lines.push({date:r.date, part:r.source||'Income', mode:r.mode, type:'IN', amt:r.amount});
+  });
+  state.expenses.forEach(r=>{
+    const d = parseDateInput(r.date);
+    if(!inRange(d,from,to)) return;
+    if(mode!=='ALL' && r.mode!==mode) return;
+    lines.push({date:r.date, part:r.category||'Expense', mode:r.mode, type:'OUT', amt:r.amount});
+  });
+
+  lines.sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0) );
+
+  let totIn=0, totOut=0;
+  const tb = document.getElementById('cbTable');
+  tb.innerHTML = '';
+  lines.forEach(l=>{
+    if(l.type==='IN') totIn+=l.amt; else totOut+=l.amt;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.date}</td><td>${l.part}</td><td>${l.mode}</td><td>${l.type}</td><td>${fmt(l.amt)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  document.getElementById('cbIn').textContent = 'In: ' + fmt(totIn);
+  document.getElementById('cbOut').textContent = 'Out: ' + fmt(totOut);
+  document.getElementById('cbBal').textContent = 'Balance: ' + fmt(totIn - totOut);
+}
+
+/* ========================= 4. BANK RECON ========================= */
+function csvToRows(txt){
+  const lines = txt.split(/\r?\n/).filter(Boolean);
+  const head = lines[0].split(',').map(s=>s.trim().toLowerCase());
+  const idxDate = head.findIndex(h=>/date/i.test(h));
+  const idxDesc = head.findIndex(h=>/desc/i.test(h));
+  const idxAmt  = head.findIndex(h=>/amount|amt/i.test(h));
+  if(idxDate<0 || idxAmt<0){ alert('CSV must include Date and Amount columns'); return []; }
+  const out = [];
+  for(let i=1;i<lines.length;i++){
+    const parts = splitCsvLine(lines[i]);
+    const date = normCsvDate(parts[idxDate]||'');
+    const amount = Number((parts[idxAmt]||'0').replace(/[^\d\-\.]/g,''));
+    const desc = idxDesc>=0 ? (parts[idxDesc]||'') : '';
+    if(!date || isNaN(amount)) continue;
+    out.push({date, desc, amount});
+  }
+  return out;
+}
+function splitCsvLine(line){
+  const res=[]; let cur='', inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='\"'){ inQ=!inQ; continue; }
+    if(ch===',' && !inQ){ res.push(cur); cur=''; } else { cur+=ch; }
+  }
+  res.push(cur); return res.map(s=>s.trim());
+}
+function normCsvDate(s){
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    const dd=m[1].padStart(2,'0'); const mm=m[2].padStart(2,'0'); let yy=m[3];
+    if(yy.length===2) yy='20'+yy;
+    return `${yy}-${mm}-${dd}`;
+  }
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+  return '';
+}
+function processBankCsv(){
+  const file = document.getElementById('bankCsv').files[0];
+  if(!file){ alert('Select a CSV'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const rows = csvToRows(e.target.result||'');
+    state.bankRows = rows;
+    save(LS_KEYS.bank, state.bankRows);
+    reconcileBank();
+  };
+  reader.readAsText(file);
+}
+function reconcileBank(){
+  const five = 5*24*3600*1000;
+  let matchedIn = 0, matchedOut = 0;
+  const unmatched = [];
+
+  state.bankRows.forEach(b=>{
+    const bd = new Date(b.date+'T00:00:00').getTime();
+    let found = false;
+
+    if(b.amount > 0){
+      for(const inc of state.incomes){
+        if(inc.mode!=='Bank') continue;
+        const d = new Date(inc.date+'T00:00:00').getTime();
+        if(Math.abs(d-bd)<=five && Math.abs(inc.amount - b.amount) < 0.01){ found=true; matchedIn+=b.amount; break; }
+      }
+    } else {
+      const outAmt = Math.abs(b.amount);
+      for(const exp of state.expenses){
+        if(exp.mode!=='Bank') continue;
+        const d = new Date(exp.date+'T00:00:00').getTime();
+        if(Math.abs(d-bd)<=five && Math.abs(exp.amount - outAmt) < 0.01){ found=true; matchedOut+=outAmt; break; }
+      }
+    }
+    if(!found) unmatched.push(b);
+  });
+
+  const tb = document.getElementById('bankUnmatched');
+  tb.innerHTML = '';
+  unmatched.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date}</td><td>${r.desc||''}</td><td>${fmt(r.amount)}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('bankInMatched').textContent = 'In matched: ' + fmt(matchedIn);
+  document.getElementById('bankOutMatched').textContent = 'Out matched: ' + fmt(matchedOut);
+}
+
+/* ========================= 5. RECEIVABLES ========================= */
+function addReceivable(){
+  const row = {
+    id: crypto.randomUUID(),
+    customer: document.getElementById('recCustomer').value.trim(),
+    invoice: document.getElementById('recInv').value.trim(),
+    invDate: document.getElementById('recDate').value,
+    due: document.getElementById('recDue').value,
+    amount: Number(document.getElementById('recAmt').value||0),
+    status: 'Open'
+  };
+  if(!row.customer || !row.invoice || !row.amount){ alert('Customer, Invoice, Amount required'); return; }
+  state.receivables.unshift(row);
+  save(LS_KEYS.receivables, state.receivables);
+  renderReceivables(); renderKpis(); renderYearEnd();
+}
+function markReceivablePaid(id){
+  const r = state.receivables.find(x=>x.id===id);
+  if(!r) return;
+  r.status = 'Received';
+  save(LS_KEYS.receivables, state.receivables);
+  state.incomes.unshift({
+    id: crypto.randomUUID(),
+    date: r.invDate || new Date().toISOString().slice(0,10),
+    source: 'Invoice '+(r.invoice||''),
+    mode: 'Bank',
+    amount: r.amount,
+    gstPct: 0,
+    desc: 'Auto from receivable'
+  });
+  save(LS_KEYS.incomes, state.incomes);
+  renderReceivables(); renderIncomes(); renderKpis(); renderYearEnd();
+}
+function delReceivable(id){
+  state.receivables = state.receivables.filter(x=>x.id!==id);
+  save(LS_KEYS.receivables, state.receivables);
+  renderReceivables(); renderKpis(); renderYearEnd();
+}
+function renderReceivables(){
+  const tb = document.getElementById('recTable');
+  tb.innerHTML = '';
+  state.receivables.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.customer}</td><td>${r.invoice}</td><td>${r.invDate||''}</td><td>${r.due||''}</td><td>${fmt(r.amount)}</td>
+                    <td>${r.status}</td>
+                    <td>${r.status==='Open'
+                        ? `<button class="btn" onclick="markReceivablePaid('${r.id}')">Mark Received</button>`
+                        : `<button class="btn secondary" onclick="delReceivable('${r.id}')">Delete</button>`}
+                    </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ========================= 6. PAYABLES ========================= */
+function addPayable(){
+  const row = {
+    id: crypto.randomUUID(),
+    vendor: document.getElementById('payVendor').value.trim(),
+    bill: document.getElementById('payBill').value.trim(),
+    billDate: document.getElementById('payDate').value,
+    due: document.getElementById('payDue').value,
+    amount: Number(document.getElementById('payAmt').value||0),
+    status: 'Open'
+  };
+  if(!row.vendor || !row.bill || !row.amount){ alert('Vendor, Bill, Amount required'); return; }
+  state.payables.unshift(row);
+  save(LS_KEYS.payables, state.payables);
+  renderPayables(); renderKpis(); renderYearEnd();
+}
+function markPayablePaid(id){
+  const p = state.payables.find(x=>x.id===id);
+  if(!p) return;
+  p.status = 'Paid';
+  save(LS_KEYS.payables, state.payables);
+  state.expenses.unshift({
+    id: crypto.randomUUID(),
+    date: p.billDate || new Date().toISOString().slice(0,10),
+    category: 'VendorBill',
+    mode: 'Bank',
+    amount: p.amount,
+    gstPct: 0,
+    desc: 'Auto from payable'
+  });
+  save(LS_KEYS.expenses, state.expenses);
+  renderPayables(); renderExpenses(); renderKpis(); renderYearEnd();
+}
+function delPayable(id){
+  state.payables = state.payables.filter(x=>x.id!==id);
+  save(LS_KEYS.payables, state.payables);
+  renderPayables(); renderKpis(); renderYearEnd();
+}
+function renderPayables(){
+  const tb = document.getElementById('payTable');
+  tb.innerHTML = '';
+  state.payables.forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.vendor}</td><td>${p.bill}</td><td>${p.billDate||''}</td><td>${p.due||''}</td><td>${fmt(p.amount)}</td>
+                    <td>${p.status}</td>
+                    <td>${p.status==='Open'
+                        ? `<button class="btn" onclick="markPayablePaid('${p.id}')">Mark Paid</button>`
+                        : `<button class="btn secondary" onclick="delPayable('${p.id}')">Delete</button>`}
+                    </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ========================= 7. GST SUMMARY ========================= */
+function renderGst(){
+  const from = parseDateInput(document.getElementById('gstFrom').value);
+  const to = parseDateInput(document.getElementById('gstTo').value);
+  let outGST = 0, inGST = 0;
+
+  state.incomes.forEach(r=>{
+    const d=parseDateInput(r.date); if(!inRange(d,from,to)) return;
+    const rate = Number(r.gstPct||0);
+    if(rate>0){ outGST += (r.amount * rate / 100); }
+  });
+  state.expenses.forEach(r=>{
+    const d=parseDateInput(r.date); if(!inRange(d,from,to)) return;
+    const rate = Number(r.gstPct||0);
+    if(rate>0){ inGST += (r.amount * rate / 100); }
+  });
+
+  document.getElementById('gstOut').textContent = 'Output GST: ' + fmt(outGST);
+  document.getElementById('gstIn').textContent = 'Input GST: ' + fmt(inGST);
+  document.getElementById('gstNet').textContent = 'Net GST Payable: ' + fmt(outGST - inGST);
+}
+
+/* ========================= 8. PROFIT & LOSS ========================= */
+function renderPL(){
+  const m = document.getElementById('plMonth').value; // YYYY-MM
+  if(!m){ alert('Select a month'); return; }
+  let inc=0, exp=0;
+  state.incomes.forEach(r=>{ if(monthKey(r.date)===m) inc+=Number(r.amount||0); });
+  state.expenses.forEach(r=>{ if(monthKey(r.date)===m) exp+=Number(r.amount||0); });
+  document.getElementById('plIncome').textContent = 'Income: ' + fmt(inc);
+  document.getElementById('plExpense').textContent = 'Expense: ' + fmt(exp);
+  document.getElementById('plProfit').textContent = 'Profit: ' + fmt(inc-exp);
+}
+
+/* ========================= 9. CATEGORY REPORT ========================= */
+function renderCategoryReport(){
+  const from = parseDateInput(document.getElementById('catFrom').value);
+  const to = parseDateInput(document.getElementById('catTo').value);
+  const totals = {};
+  state.expenses.forEach(r=>{
+    const d=parseDateInput(r.date); if(!inRange(d,from,to)) return;
+    totals[r.category] = (totals[r.category]||0) + Number(r.amount||0);
+  });
+  const tb = document.getElementById('catTable'); tb.innerHTML='';
+  Object.entries(totals).sort((a,b)=>b[1]-a[1]).forEach(([cat,sum])=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${cat}</td><td>${fmt(sum)}</td>`;
+    tb.appendChild(tr);
+  });
+  drawBarChart('catChart', totals);
+}
+function drawBarChart(canvasId, obj){
+  const cvs = document.getElementById(canvasId);
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width = cvs.clientWidth || 600;
+  const H = cvs.height = cvs.height;
+  ctx.clearRect(0,0,W,H);
+  const entries = Object.entries(obj);
+  if(!entries.length){ ctx.fillStyle='#9fb1c9'; ctx.fillText('No data', 10, 20); return; }
+  const max = Math.max(...entries.map(e=>e[1]));
+  const barW = Math.max(24, (W - 40) / entries.length - 12);
+  entries.forEach((e,i)=>{
+    const x = 20 + i*(barW+12);
+    const h = Math.round((e[1]/max)* (H-40));
+    const y = H - 20 - h;
+    const grad = ctx.createLinearGradient(x,y,x,y+h);
+    grad.addColorStop(0,'#00d2ff'); grad.addColorStop(1,'#7c4dff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, barW, h);
+    ctx.fillStyle='#cfe0ff';
+    ctx.font='12px Inter, Arial';
+    ctx.save();
+    ctx.translate(x+barW/2, H-5);
+    ctx.rotate(-Math.PI/6);
+    ctx.textAlign='right';
+    ctx.fillText(e[0], 0, 0);
+    ctx.restore();
+  });
+}
+
+/* ========================= 10. YEAR-END CLOSING ========================= */
+function renderYearEnd(){
+  let cashIn=0,cashOut=0, bankIn=0, bankOut=0;
+  state.incomes.forEach(r=>{ if(r.mode==='Cash') cashIn+=Number(r.amount||0); else if(r.mode==='Bank') bankIn+=Number(r.amount||0); });
+  state.expenses.forEach(r=>{ if(r.mode==='Cash') cashOut+=Number(r.amount||0); else if(r.mode==='Bank') bankOut+=Number(r.amount||0); });
+
+  const cashBal = cashIn - cashOut;
+  const bankBal = bankIn - bankOut;
+
+  const ar = state.receivables.filter(r=>r.status==='Open').reduce((s,r)=>s+Number(r.amount||0),0);
+  const ap = state.payables.filter(p=>p.status==='Open').reduce((s,p)=>s+Number(p.amount||0),0);
+
+  document.getElementById('yeCash').textContent = 'Cash Balance: ' + fmt(cashBal);
+  document.getElementById('yeBank').textContent = 'Bank Balance: ' + fmt(bankBal);
+  document.getElementById('yeAR').textContent = 'Receivables: ' + fmt(ar);
+  document.getElementById('yeAP').textContent = 'Payables: ' + fmt(ap);
+}
+
+/* ========================= EXPORTS ========================= */
+function exportYearEnd(){
+  const rec = {
+    'Cash Balance': document.getElementById('yeCash').textContent.split(': ')[1],
+    'Bank Balance': document.getElementById('yeBank').textContent.split(': ')[1],
+    'Receivables': document.getElementById('yeAR').textContent.split(': ')[1],
+    'Payables': document.getElementById('yeAP').textContent.split(': ')[1]
+  };
+  const ws = XLSX.utils.json_to_sheet([rec]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'YearEnd');
+  XLSX.writeFile(wb, 'YearEnd_Snapshot.xlsx');
+}
+
+function exportAccountsToExcel(){
+  const wb = XLSX.utils.book_new();
+  if(state.expenses.length){
+    const ws = XLSX.utils.json_to_sheet(state.expenses.map(x=>({
+      Date:x.date, Category:x.category, Mode:x.mode, Amount:x.amount, GST_Pct:x.gstPct, Description:x.desc
+    })));
+    XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+  }
+  if(state.incomes.length){
+    const ws = XLSX.utils.json_to_sheet(state.incomes.map(x=>({
+      Date:x.date, Source:x.source, Mode:x.mode, Amount:x.amount, GST_Pct:x.gstPct, Description:x.desc
+    })));
+    XLSX.utils.book_append_sheet(wb, ws, 'Incomes');
+  }
+  if(state.receivables.length){
+    const ws = XLSX.utils.json_to_sheet(state.receivables.map(x=>({
+      Customer:x.customer, Invoice:x.invoice, InvDate:x.invDate, Due:x.due, Amount:x.amount, Status:x.status
+    })));
+    XLSX.utils.book_append_sheet(wb, ws, 'Receivables');
+  }
+  if(state.payables.length){
+    const ws = XLSX.utils.json_to_sheet(state.payables.map(x=>({
+      Vendor:x.vendor, Bill:x.bill, BillDate:x.billDate, Due:x.due, Amount:x.amount, Status:x.status
+    })));
+    XLSX.utils.book_append_sheet(wb, ws, 'Payables');
+  }
+  if(state.bankRows.length){
+    const ws = XLSX.utils.json_to_sheet(state.bankRows.map(x=>({
+      Date:x.date, Description:x.desc, Amount:x.amount
+    })));
+    XLSX.utils.book_append_sheet(wb, ws, 'BankCSV');
+  }
+  if(state.cargo.length){
+    const ws = XLSX.utils.json_to_sheet(state.cargo);
+    XLSX.utils.book_append_sheet(wb, ws, 'Cargo');
+  }
+  XLSX.writeFile(wb, 'Accounts_Data.xlsx');
+}
+
+/* ========================= DASHBOARD KPIs ========================= */
+function renderKpis(){
+  // Current month
+  const now = new Date(); const key = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  let inc=0, exp=0;
+  state.incomes.forEach(r=>{ if(monthKey(r.date)===key) inc+=Number(r.amount||0); });
+  state.expenses.forEach(r=>{ if(monthKey(r.date)===key) exp+=Number(r.amount||0); });
+  const profit = inc-exp;
+  const ar = state.receivables.filter(r=>r.status==='Open').reduce((s,r)=>s+Number(r.amount||0),0);
+
+  document.getElementById('kpiInc').textContent = fmt(inc);
+  document.getElementById('kpiExp').textContent = fmt(exp);
+  document.getElementById('kpiProfit').textContent = fmt(profit);
+  document.getElementById('kpiAR').textContent = fmt(ar);
+}
+
+/* ========================= AIR CARGO FUNCTIONS (subtab 11) ========================= */
+function addCargo(){
+  const getVal=id=>document.getElementById(id).value||'';
+  const num=id=>Number(getVal(id)||0);
+
+  let buying=num('f_buying'), selling=num('f_selling');
+  let charges = num('f_freight')+num('f_awbchr')+num('f_srv')+num('f_aai')+num('f_doc')+num('f_exam')+num('f_hand')+num('f_trans')+num('f_mot')+num('f_vpass')+num('f_pq')+num('f_due')+num('f_cha')+num('f_aai2');
+  let sund=num('f_sund');
+  let gst = (selling+charges)*0.18;
+  let total = selling+charges+gst;
+  let margin = selling-buying;
+  let netProfit = margin - charges + sund;
+
+  const row = {
+    id: crypto.randomUUID(),
+    AIRPOLINVNO:getVal('f_airpol'),
+    VOYAGE_NO:getVal('f_voyage'),
+    DATE:getVal('f_date'),
+    SHIPPER:getVal('f_shipper'),
+    CONSIGNEE:getVal('f_consignee'),
+    SUBAGENT:getVal('f_subagent'),
+    AWBNUMBER:getVal('f_awb'),
+    SHIPPERINVNo:getVal('f_shipinv'),
+    SBNO:getVal('f_sbno'),
+    COMM:getVal('f_comm'),
+    GWT:getVal('f_gwt'),
+    CWT:getVal('f_cwt'),
+    NO_OF_PCS:getVal('f_pcs'),
+    FLT:getVal('f_flt'),
+    FLTNO:getVal('f_fltno'),
+    POL:getVal('f_pol'),
+    POD:getVal('f_pod'),
+    AIRLINES:getVal('f_airlines'),
+    BUYING: buying,
+    SELLING: selling,
+    FREIGHT_amt: num('f_freight'),
+    AWB_chrgs: num('f_awbchr'),
+    SERVICE_CHARGES: num('f_srv'),
+    AAI_CHARGES: num('f_aai'),
+    DOCUMENTATION_chrgs: num('f_doc'),
+    EXAMINATION_chrgs: num('f_exam'),
+    HANDLING_chrgs: num('f_hand'),
+    TRANSPORT_chrgs: num('f_trans'),
+    MOT_chrgs: num('f_mot'),
+    VPASS_chrgs: num('f_vpass'),
+    PQ_chrgs: num('f_pq'),
+    OTHER_CHARGES: getVal('f_other'),
+    AIRLINES_amt: num('f_airamt'),
+    DUECARRIER_chrgs: num('f_due'),
+    CHA_chrgs: num('f_cha'),
+    AAI_chgrs: num('f_aai2'),
+    SUNDRIES: sund,
+    GST_IGST: Number(gst.toFixed(2)),
+    TOTAL_SALES_INVOICE_AMT: Number(total.toFixed(2)),
+    MARGIN: Number(margin.toFixed(2)),
+    NETPROFIT: Number(netProfit.toFixed(2)),
+    CHAORFORWARDINGAGENT: getVal('f_agent')
+  };
+
+  state.cargo.unshift(row);
+  save(LS_KEYS.cargo, state.cargo);
+  renderCargo();
+}
+
+function delCargo(idx){
+  state.cargo.splice(idx,1);
+  save(LS_KEYS.cargo, state.cargo);
+  renderCargo();
+}
+
+function renderCargo(){
+  const tb = document.getElementById('cargoTable');
+  tb.innerHTML = '';
+  state.cargo.forEach((r, idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.AIRPOLINVNO||''}</td><td>${r.VOYAGE_NO||''}</td><td>${r.DATE||''}</td>
+                    <td>${r.SHIPPER||''}</td><td class="right">${fmt(r.SELLING)}</td><td class="right">${fmt(r.BUYING)}</td>
+                    <td class="right">${fmt(r.GST_IGST)}</td><td class="right">${fmt(r.TOTAL_SALES_INVOICE_AMT)}</td>
+                    <td class="right">${fmt(r.MARGIN)}</td><td class="right">${fmt(r.NETPROFIT)}</td>
+                    <td><button class="btn secondary" onclick="delCargo(${idx})">Delete</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ========================= INIT ========================= */
+function initAccountsUI(){
+  renderExpenses();
+  renderIncomes();
+  renderReceivables();
+  renderPayables();
+  renderYearEnd();
+  renderKpis();
+  renderCargo();
+
+  // default Cashbook: current month
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth()+1).padStart(2,'0');
+  const lastDay = new Date(y, today.getMonth()+1, 0).getDate();
+  document.getElementById('cbFrom').value = `${y}-${m}-01`;
+  document.getElementById('cbTo').value = `${y}-${m}-${String(lastDay).padStart(2,'0')}`;
+  renderCashbook();
+}
+
+/* Boot */
+document.addEventListener('DOMContentLoaded', initAccountsUI);
+
+/* Small convenience: export cargo separate */
+function exportCargo(){
+  if(!state.cargo.length){ alert('No cargo rows'); return; }
+  const ws = XLSX.utils.json_to_sheet(state.cargo);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Cargo');
+  XLSX.writeFile(wb, 'Cargo_Data.xlsx');
+}
+</script>
+</body>
+</html>
